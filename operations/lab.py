@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
 import secrets
+import signal
 import subprocess
 import sys
 import threading
@@ -308,7 +310,7 @@ def demo():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('deploy-primary', 'deploy-dr', 'backup', 'demo', 'serve', 'status', 'monitor'))
+    parser.add_argument('command', choices=('deploy-primary', 'deploy-dr', 'backup', 'demo', 'serve', 'stop', 'status', 'monitor'))
     parser.add_argument('--backup', type=Path, help='Verified archive to restore when monitoring detects failure')
     args = parser.parse_args()
     if args.command.startswith('deploy-'):
@@ -322,9 +324,26 @@ def main():
         for site in SITES:
             print(kubectl('-n', namespace(site), 'get', 'pods,svc,pvc').decode())
     elif args.command == 'serve':
-        with forwards((active_site(),)), gateway():
-            print('Gateway listening at http://127.0.0.1:8090/readyz', flush=True)
-            threading.Event().wait()
+        pidfile = LOCAL / 'server.pid'
+        pidfile.write_text(str(os.getpid()))
+        try:
+            with forwards((active_site(),)), gateway():
+                print('Gateway listening at http://127.0.0.1:8090/readyz', flush=True)
+                threading.Event().wait()
+        finally:
+            pidfile.unlink(missing_ok=True)
+    elif args.command == 'stop':
+        pidfile = LOCAL / 'server.pid'
+        if not pidfile.exists():
+            print('No managed gateway is running.')
+            return
+        pid = int(pidfile.read_text())
+        process = Path('/proc') / str(pid)
+        command = (process / 'cmdline').read_bytes().split(b'\0')
+        if b'operations.lab' not in command or b'serve' not in command or (process / 'cwd').resolve() != ROOT:
+            raise RuntimeError('Recorded PID does not belong to this CloudTwin gateway; refusing to stop it')
+        os.kill(pid, signal.SIGTERM)
+        print('Graceful gateway stop requested. Kubernetes data and workloads are retained.')
     elif args.command == 'monitor':
         if not args.backup:
             parser.error('monitor requires --backup')
@@ -336,7 +355,10 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1 and sys.argv[1] == 'status':
+    def terminate(signum, frame):
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, terminate)
+    if len(sys.argv) > 1 and sys.argv[1] in ('status', 'stop'):
         main()
         raise SystemExit(0)
     # WSL/Linux: one controller at a time, released even after a process crash.

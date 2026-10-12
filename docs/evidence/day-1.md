@@ -43,3 +43,9 @@ Docker Desktop logs identified a startup failure while accessing `sailor-ingest.
 - Fault injected at **2026-10-12 12:13:16 Asia/Dubai** (08:13:16 UTC). The full local report is `artifacts/recovery-report.json` (Git-ignored).
 
 The local experiment preceded a review improvement: primary monitoring now probes the Kubernetes Service from DR rather than relying solely on a localhost tunnel. The final version is also exercised by the end-to-end GitHub Actions job. These measurements are one synthetic same-host run, not an availability guarantee. Continuous replication, host-loss resilience and automatic failback are not implemented.
+
+## End-to-end CI and final checks
+
+- [Full recovery CI run 38222512467](https://github.com/Hazaa-Sal/cloudtwin-/actions/runs/38222512467) passed on revision `ff6e43f1ad88bab45b5ed1d6c1e3428337e03ac0`: tests, script parsing, manifest rendering, fresh kind cluster, image build/load, primary/DR verification and the complete automatic recovery experiment with the improved Service probe. Recovery JSON is uploaded as a workflow artifact.
+- 13 local tests passed after the gateway lifecycle addition; both overlays render and all PowerShell scripts parse.
+- Windows localhost request returned DR ready with database reachable. Managed gateway stop was exercised successfully; it shuts down its own port-forward and retains the Kubernetes workloads/data.

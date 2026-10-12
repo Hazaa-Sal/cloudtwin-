@@ -29,7 +29,7 @@ Follow the [working WSL recovery runbook](docs/runbooks/wsl-recovery.md), one ch
 ./scripts/cloudtwin.ps1 serve
 ```
 
-Do not advance if a checkpoint fails. After the demo, primary remains fenced and DR is active; do not redeploy primary. `serve` opens the active site at http://127.0.0.1:8090/readyz and keeps the WSL session active. Stop it with Ctrl+C. This is a read-only HTTP application with synthetic SQL writes for recovery experiments.
+Do not advance if a checkpoint fails. After the demo, primary remains fenced and DR is active; do not redeploy primary. `serve` opens the active site at http://127.0.0.1:8090/readyz and keeps the WSL session active. Stop it with Ctrl+C or `./scripts/cloudtwin.ps1 stop`. This is a read-only HTTP application with synthetic SQL writes for recovery experiments.
 
 ## Repository layout
 

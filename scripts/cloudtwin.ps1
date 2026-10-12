@@ -1,7 +1,7 @@
 #requires -Version 7.3
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('setup', 'deploy-primary', 'deploy-dr', 'backup', 'demo', 'serve', 'status', 'monitor')]
+    [ValidateSet('setup', 'deploy-primary', 'deploy-dr', 'backup', 'demo', 'serve', 'stop', 'status', 'monitor')]
     [string]$Command,
     [string]$Backup
 )
