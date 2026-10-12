@@ -20,12 +20,13 @@
 - `kubectl kustomize infra/kubernetes/overlays/primary`: passed.
 - `kubectl kustomize infra/kubernetes/overlays/dr`: passed.
 - All PowerShell scripts: parser validation passed.
+- [GitHub Actions run 38220408808](https://github.com/Hazaa-Sal/cloudtwin-/actions/runs/38220408808): completed successfully for revision `6ef7551f51d9a49efeb0269ed787df8c7d8562a8`, including health tests, script/manifest validation and Docker image build on the hosted runner.
 - Source review: credentials excluded from Git; existing secrets preserved; all mutations target docker-desktop and CloudTwin namespaces; no cloud resources created.
 
 ## Pending runtime evidence
 
 Docker Desktop startup was attempted. Engine readiness was not observed. GUI launch approval timed out. Owner was asked to open Docker Desktop and enable Kubernetes.
 
-No image build, server-side manifest validation, live PostgreSQL query, PVC binding, or Kubernetes rollout is claimed here until executed successfully. CI results must be checked on GitHub separately. Expected outputs in the runbook are illustrative.
+The image build passed in GitHub Actions. A local image build, server-side manifest validation, live PostgreSQL query, PVC binding, and Kubernetes rollout remain unverified. Expected outputs in the runbook are illustrative.
 
 Day 1 does not yet implement replication, backups, failover or measured RTO/RPO. Continue at runbook checkpoint 1 after the Docker engine and Kubernetes are Running.

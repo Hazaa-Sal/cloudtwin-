@@ -1,6 +1,6 @@
 # Day 1: two local Kubernetes environments
 
-Run from the repository root in PowerShell. Read the explanation and compare the expected output after each command. Stop on failure.
+Run from the repository root in PowerShell 7.3 or newer (for reliable native-command argument quoting). Read the explanation and compare the expected output after each command. Stop on failure.
 
 ## 1. Start the installed runtime
 
