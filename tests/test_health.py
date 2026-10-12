@@ -54,6 +54,7 @@ class HttpTests(unittest.TestCase):
                 urllib.request.urlopen(self.url + '/readyz', timeout=3)
             self.assertEqual(error.exception.code, 503)
             self.assertEqual(json.load(error.exception)['status'], 'not_ready')
+            error.exception.close()
 
 
 if __name__ == "__main__":

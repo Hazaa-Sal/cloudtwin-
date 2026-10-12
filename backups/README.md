@@ -1,1 +1,1 @@
-Local backup output belongs here and is ignored by Git. Backup/restore implementation is planned for Day 2. Do not put credentials or database dumps in the public repository.
+Local PostgreSQL custom archives and SHA-256 metadata are written here by `python3 -m operations.lab backup` and `demo`. They are ignored by Git. The archive contains only the synthetic cloudtwin_events table. Do not put credentials or database dumps in the public repository.

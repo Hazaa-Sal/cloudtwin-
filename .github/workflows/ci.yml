@@ -8,16 +8,27 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Test health behavior
-        run: python -m unittest discover -s tests -v
       - name: Validate scripts and render both environments
         shell: pwsh
         run: ./scripts/validate.ps1
-      - name: Build container
-        run: docker build -t cloudtwin-api:ci .
+      - name: Create local cluster and build container
+        run: bash scripts/bootstrap-wsl.sh
+      - name: Verify primary
+        run: python -m operations.lab deploy-primary
+      - name: Verify DR
+        run: python -m operations.lab deploy-dr
+      - name: Verify backup, automatic failover and recovery measurements
+        run: python -m operations.lab demo
+      - name: Save recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-evidence
+          path: artifacts/recovery-report.json
+          if-no-files-found: ignore

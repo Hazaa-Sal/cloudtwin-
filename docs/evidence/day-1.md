@@ -23,10 +23,23 @@
 - [GitHub Actions run 38220408808](https://github.com/Hazaa-Sal/cloudtwin-/actions/runs/38220408808): completed successfully for revision `6ef7551f51d9a49efeb0269ed787df8c7d8562a8`, including health tests, script/manifest validation and Docker image build on the hosted runner.
 - Source review: credentials excluded from Git; existing secrets preserved; all mutations target docker-desktop and CloudTwin namespaces; no cloud resources created.
 
-## Pending runtime evidence
+## Initial Desktop blocker — resolved for CloudTwin through WSL
 
 Docker Desktop startup was attempted. Engine readiness was not observed. GUI launch approval timed out. Owner was asked to open Docker Desktop and enable Kubernetes.
 
-The image build passed in GitHub Actions. A local image build, server-side manifest validation, live PostgreSQL query, PVC binding, and Kubernetes rollout remain unverified. Expected outputs in the runbook are illustrative.
+Docker Desktop logs identified a startup failure while accessing `sailor-ingest.sock`. CloudTwin now runs on Ubuntu WSL2 with Ubuntu's Docker Engine 29.1.3, repository-local kind v0.33.0, kubectl v1.36.4 and a digest-pinned Kubernetes v1.36.4 node. The Desktop installation and its stored data were preserved. A temporary WSL session keeper was used after idle-session shutdowns interrupted initial deployment.
 
-Day 1 does not yet implement replication, backups, failover or measured RTO/RPO. Continue at runbook checkpoint 1 after the Docker engine and Kubernetes are Running.
+## Live local verification completed
+
+- Dedicated `cloudtwin-control-plane` node Ready, default `standard` StorageClass available.
+- API image built locally and loaded into kind.
+- Primary and DR each reached two pods `1/1 Running`, one 1 GiB PVC `Bound`, successful SQL and Service readiness.
+- PostgreSQL custom archive produced with SHA-256 metadata; no backups or secrets committed.
+- Controlled primary API scale-down triggered automatic recovery after three consecutive failed checks.
+- Primary API/database were stopped before restore and promotion; primary PVC retained.
+- DR restored both protected records exactly. The third record, deliberately committed after backup, was identified as lost.
+- Gateway `/readyz` returned `{"status":"ready","site":"dr","database":"reachable"}` after recovery.
+- Local experiment: **RTO 37.044 seconds; RPO 3.603325 seconds; 3 source records, 2 recovered, missing ID 3**.
+- Fault injected at **2026-10-12 12:13:16 Asia/Dubai** (08:13:16 UTC). The full local report is `artifacts/recovery-report.json` (Git-ignored).
+
+The local experiment preceded a review improvement: primary monitoring now probes the Kubernetes Service from DR rather than relying solely on a localhost tunnel. The final version is also exercised by the end-to-end GitHub Actions job. These measurements are one synthetic same-host run, not an availability guarantee. Continuous replication, host-loss resilience and automatic failback are not implemented.
