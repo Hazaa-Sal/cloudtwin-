@@ -279,6 +279,42 @@ def metrics(before, recovered, rto):
             'failure_threshold': 3}
 
 
+def resume_cluster():
+    """Resume the existing local node without changing replicas, secrets or data."""
+    docker = ['/usr/bin/docker', '--host', 'unix:///var/run/docker.sock']
+    node = 'cloudtwin-control-plane'
+    def inspect_node():
+        result = subprocess.run(docker + ['inspect', node], check=True,
+                                capture_output=True, timeout=15)
+        info = json.loads(result.stdout)[0]
+        if info['Config']['Labels'].get('io.x-k8s.kind.cluster') != 'cloudtwin':
+            raise RuntimeError('Container is not owned by the CloudTwin kind cluster')
+        return info
+    restart_attempted = False
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        info = inspect_node()
+        if not info['State']['Running']:
+            if restart_attempted:
+                raise RuntimeError('CloudTwin node exited after restart; inspect Docker logs')
+            subprocess.run(docker + ['start', node], check=True, timeout=30)
+            restart_attempted = True
+        try:
+            if kubectl('--request-timeout=5s', 'get', '--raw=/readyz', timeout=10).strip() == b'ok':
+                break
+        except (RuntimeError, subprocess.TimeoutExpired):
+            pass
+        time.sleep(2)
+    else:
+        raise TimeoutError('Kubernetes did not become ready within 120 seconds')
+    kubectl('wait', '--for=condition=Ready', 'nodes', '--all', '--timeout=90s', timeout=110)
+    site = active_site()
+    for workload in ('statefulset/postgres', 'deployment/api'):
+        print(kubectl('-n', namespace(site), 'rollout', 'status', workload,
+                      '--timeout=120s', timeout=140).decode(), flush=True)
+    print(f'PASS: existing cluster resumed; {site} remains active.', flush=True)
+
+
 def demo():
     if active_site() != 'primary':
         raise RuntimeError('Demo requires primary active; repeated failover is not a safe reset')
@@ -310,7 +346,7 @@ def demo():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('deploy-primary', 'deploy-dr', 'backup', 'demo', 'serve', 'stop', 'status', 'monitor'))
+    parser.add_argument('command', choices=('deploy-primary', 'deploy-dr', 'backup', 'demo', 'serve', 'resume', 'stop', 'status', 'monitor'))
     parser.add_argument('--backup', type=Path, help='Verified archive to restore when monitoring detects failure')
     args = parser.parse_args()
     if args.command.startswith('deploy-'):
@@ -323,7 +359,9 @@ def main():
         print(json.dumps({'active': active_site()}))
         for site in SITES:
             print(kubectl('-n', namespace(site), 'get', 'pods,svc,pvc').decode())
-    elif args.command == 'serve':
+    elif args.command in ('serve', 'resume'):
+        if args.command == 'resume':
+            resume_cluster()
         pidfile = LOCAL / 'server.pid'
         pidfile.write_text(str(os.getpid()))
         try:
@@ -340,7 +378,7 @@ def main():
         pid = int(pidfile.read_text())
         process = Path('/proc') / str(pid)
         command = (process / 'cmdline').read_bytes().split(b'\0')
-        if b'operations.lab' not in command or b'serve' not in command or (process / 'cwd').resolve() != ROOT:
+        if b'operations.lab' not in command or not ({b'serve', b'resume'} & set(command)) or (process / 'cwd').resolve() != ROOT:
             raise RuntimeError('Recorded PID does not belong to this CloudTwin gateway; refusing to stop it')
         os.kill(pid, signal.SIGTERM)
         print('Graceful gateway stop requested. Kubernetes data and workloads are retained.')

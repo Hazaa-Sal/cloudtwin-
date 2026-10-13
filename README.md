@@ -19,6 +19,8 @@ Both environments share one host and cluster. This lab cannot survive loss of th
 
 ## Start here
 
+**Already deployed?** Use `./scripts/cloudtwin.ps1 resume` after restarting your computer. This starts the existing lab and gateway while preserving the active site and stored records. Do not repeat the deployment/demo sequence after failover.
+
 Follow the [working WSL recovery runbook](docs/runbooks/wsl-recovery.md), one checkpoint at a time. Docker Desktop on this machine fails during startup, so the working path uses Ubuntu Docker Engine and kind. The [Desktop runbook](docs/runbooks/day-1.md) remains an alternative for a healthy Desktop installation.
 
 ```powershell

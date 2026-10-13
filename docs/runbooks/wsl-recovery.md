@@ -11,6 +11,7 @@ From this repository in **PowerShell 7.3+**, run the commands below one at a tim
 | `./scripts/cloudtwin.ps1 deploy-dr` | Creates the separate DR stack and verifies it | DR PASS, both pods 1/1, PVC Bound |
 | `./scripts/cloudtwin.ps1 demo` | Creates sample records, backs them up, adds a later record, stops primary API, detects failure, fences primary, restores DR and switches gateway | Recovery report and PASS |
 | `./scripts/cloudtwin.ps1 serve` | Serves the active site through a local gateway | Open http://127.0.0.1:8090/readyz |
+| `./scripts/cloudtwin.ps1 resume` | Starts the existing node if stopped, waits for Kubernetes and active-site workloads, then serves the gateway | Active site preserved; endpoint ready |
 | `./scripts/cloudtwin.ps1 stop` | Gracefully stops this repository's managed gateway and its tunnel | Workloads and stored data retained |
 | `./scripts/cloudtwin.ps1 status` | Prints active site and workloads/storage | After demo: DR active, primary pods stopped, both PVCs retained |
 
@@ -49,7 +50,7 @@ Ctrl+C stops the gateway and its own tunnels; Kubernetes workloads continue. To 
 docker stop cloudtwin-control-plane
 ```
 
-Resume with `docker start cloudtwin-control-plane`, wait for nodes Ready, then run `serve`. Do not delete the kind cluster or PVCs unless you intend to discard the lab's stored data. Do not use factory reset or Docker prune as troubleshooting steps.
+After restarting Windows or stopping the lab, run `./scripts/cloudtwin.ps1 resume` from PowerShell and leave that window open. It preserves the saved active site, volumes and fencing. It performs at most one explicit node restart, and fails with diagnostics if the node exits again. Do not delete the kind cluster or PVCs unless you intend to discard the lab's stored data. Do not use factory reset or Docker prune as troubleshooting steps.
 
 ## Runtime installation performed
 

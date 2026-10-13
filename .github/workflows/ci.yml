@@ -25,6 +25,11 @@ jobs:
         run: python -m operations.lab deploy-dr
       - name: Verify backup, automatic failover and recovery measurements
         run: python -m operations.lab demo
+      - name: Verify restart preserves recovered records and primary fencing
+        run: |
+          python -c "from operations.lab import inventory; import json; from pathlib import Path; Path('.local/before-restart.json').write_text(json.dumps(inventory('dr')))"
+          docker stop cloudtwin-control-plane
+          python -c "from operations.lab import resume_cluster, inventory, active_site, kubectl; import json; from pathlib import Path; resume_cluster(); assert inventory('dr') == json.loads(Path('.local/before-restart.json').read_text()); assert active_site() == 'dr'; assert not json.loads(kubectl('-n', 'cloudtwin-primary', 'get', 'pods', '-o', 'json'))['items']"
       - name: Save recovery evidence
         if: always()
         uses: actions/upload-artifact@v4
